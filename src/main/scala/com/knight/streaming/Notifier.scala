@@ -162,7 +162,7 @@ object StreamParser {
       }
 
       if (res == false) {
-        result = (false, s"condition failed for operator $operat")
+        result = (false, s"condition failed for operator $operator")
       }
       result
     }
