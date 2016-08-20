@@ -1,0 +1,53 @@
+{
+  "StreamParser": {
+    "batch_interval": 5,
+    "ttl_meta": "3600",
+    "topics": ["datamonster_prices"],
+    "offset": "smallest",
+    "max_msg_rate_per_partition": "10",
+    "receiver_type": "kafka",
+    "brokers": "192.168.0.210:9092",
+    "notifier_type": "print",
+    "notifier_params": {
+      "empty": ""
+    },
+    "rules": {
+      "title": {
+        "type": "String"
+      },
+      "storeid": {
+        "type": "Int"
+      },
+      "minsaleprice": {
+        "type": "Double",
+        "min": 0.0,
+        "max": 999999.0
+      },
+      "minlistprice": {
+        "type": "Double",
+        "min": 1,
+        "max": 100000.0
+      },
+      "title": {
+        "type": "String"
+      },
+      "currencyType": {
+        "type": "String"
+      },
+      "availability": {
+        "type": "String"
+      },
+      "priceType": {
+        "type": "String"
+      },
+      "countryCode":{
+        "type": "String"
+      }
+    },
+    "zookeeper": {
+      "servers": "10.12.20.136,10.12.20.110,10.12.20.235",
+      "session_timeout": "10000",
+      "connection_timeout": "5000"
+    }
+  }
+}
