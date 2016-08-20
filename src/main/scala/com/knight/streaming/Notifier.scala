@@ -125,6 +125,49 @@ object StreamParser {
     }
   }
 
+  def intComparer(config: Config): (Any, Any) => (Boolean, String) = {
+    (m: Any, n: Any) => {
+      val i = m.asInstanceOf[BigInt]
+      val j = n.asInstanceOf[BigInt]
+      var result = (true, "")
+      val operator = config.getString("operator")
+      val res: Boolean = operator match {
+        case "greater" => i > j
+        case "lesser" => i < j
+        case "greater than or equal to" => i >= j
+        case "lesser than or equal to" => i <= j
+        case "equal" => i == j
+      }
+      if (res == false) {
+        result = (false, s"condition failed for operator $operator")
+      }
+      result
+    }
+  }
+
+  def doubleComparer(config: Config): (Any, Any) => (Boolean, String) = {
+    (m: Any, n: Any) => {
+      val i = m.asInstanceOf[Double]
+      val j = n.asInstanceOf[Double]
+      var result = (true, "")
+      val operator = config.getString("operator")
+      val name = config.getString("name")
+
+      val res: Boolean = operator match {
+        case "greater" => i > j
+        case "lesser" => i < j
+        case "greater than or equal to" => i >= j
+        case "lesser than or equal to" => i <= j
+        case "equal" => i == j
+      }
+
+      if (res == false) {
+        result = (false, s"condition failed for operator $operat")
+      }
+      result
+    }
+  }
+
   def DoubleValidator(config: Config): (Any) => (Boolean, String) = {
     (k: Any) => {
       val d = k.asInstanceOf[Double]
@@ -151,6 +194,16 @@ object StreamParser {
     handler
   }
 
+
+  def compareDependencyHandler(datatype: String,
+                               config: Config): (Any, Any) => (Boolean, String) = {
+    val handler = datatype.toLowerCase match {
+      case "int" => intComparer(config)
+      case "double" => doubleComparer(config)
+    }
+    handler
+  }
+
   def applyRules(rulesConf: Config): (Map[String, Any]) => (Boolean, String) = {
     (message: Map[String, Any]) => {
       val rulesValues: Set[String] = {
@@ -158,15 +211,28 @@ object StreamParser {
       }
       var msg = (true, "")
       for (key <- rulesValues) {
-        val handler = getHandler(rulesConf.getString(key + ".type"),
-          rulesConf.getConfig(key))
+        val dataType = rulesConf.getString(key + ".type")
+        val handler = getHandler(dataType, rulesConf.getConfig(key))
         val value: Option[Any] = message.get(key.toLowerCase())
-//        println(s"$value for $key")
+        //        println(s"$value for $key")
 
         val res: (Boolean, String) = if (value != None) {
           handler(value.get)
         } else {
           (true, "")
+        }
+        if (rulesConf.hasPath(key + ".deps")) {
+          val dependencyRulesConf = rulesConf.getConfig(key + ".deps")
+          val depHandler = compareDependencyHandler(dataType, dependencyRulesConf)
+          val depKey = dependencyRulesConf.getString("name")
+          val depValue = message.get(depKey)
+          val depRes = if (depValue != None && value != None) {
+            depHandler(value.get, depValue.get)
+          } else {
+            (true, "")
+          }
+          if (depRes._1 == false)
+            msg = (msg._1 & depRes._1, msg._2 + depRes._2 + key + "," + depKey + "\n")
         }
 
         if (res._1 == false)
@@ -220,7 +286,7 @@ object StreamParser {
                   if (notificationMsg._1 == false) {
                     notifier.notify(notificationMsg._2 + msg)
                   }
-//                  println(msg)
+                  //                  println(msg)
                 }
                 catch {
                   case ex: Exception =>
